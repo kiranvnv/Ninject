@@ -1,22 +1,29 @@
-#region License
-// 
-// Author: Nate Kohari <nate@enkari.com>
-// Copyright (c) 2007-2010, Enkari, Ltd.
-// 
-// Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-// See the file LICENSE.txt for details.
-// 
-#endregion
-#region Using Directives
-using System;
-using System.Collections.Generic;
-using Ninject.Parameters;
-using Ninject.Planning;
-using Ninject.Planning.Bindings;
-#endregion
+// -------------------------------------------------------------------------------------------------
+// <copyright file="InstanceReference.cs" company="Ninject Project Contributors">
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
+//   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
+//   You may not use this file except in compliance with one of the Licenses.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//   or
+//       http://www.microsoft.com/opensource/licenses.mspx
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+// </copyright>
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Activation
 {
+    using System;
+    using System.Security;
+
     /// <summary>
     /// Holds an instance during activation or after it has been cached.
     /// </summary>
@@ -32,24 +39,17 @@ namespace Ninject.Activation
         /// </summary>
         /// <typeparam name="T">The type in question.</typeparam>
         /// <returns><see langword="True"/> if the instance is of the specified type, otherwise <see langword="false"/>.</returns>
+        [SecuritySafeCritical]
         public bool Is<T>()
         {
-#if !SILVERLIGHT && !WINDOWS_PHONE && !NETCF && !MONO
-            if (System.Runtime.Remoting.RemotingServices.IsTransparentProxy(Instance)
-                && System.Runtime.Remoting.RemotingServices.GetRealProxy(Instance).GetType().Name == "RemotingProxy")
+#if !NO_REMOTING
+            if (System.Runtime.Remoting.RemotingServices.IsTransparentProxy(this.Instance)
+                && System.Runtime.Remoting.RemotingServices.GetRealProxy(this.Instance).GetType().Name == "RemotingProxy")
             {
-// ReSharper disable UseIsOperator.1
-// ReSharper disable PossibleMistakenCallToGetType.1
-// ReSharper disable UseMethodIsInstanceOfType 
-// Must call typeof(T).IsAssignableFrom(Instance.GetType()) to convert the TransparentProxy to the actual proxy type 
-                return typeof(T).IsAssignableFrom(Instance.GetType());
-// ReSharper restore UseMethodIsInstanceOfType
-// ReSharper restore PossibleMistakenCallToGetType.1
-// ReSharper restore UseIsOperator.1
-            };
+                return typeof(T).IsAssignableFrom(this.Instance.GetType());
+            }
 #endif
-
-            return Instance is T;
+            return this.Instance is T;
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Ninject.Activation
         /// <returns>The instance.</returns>
         public T As<T>()
         {
-            return (T)Instance;
+            return (T)this.Instance;
         }
 
         /// <summary>
@@ -70,7 +70,9 @@ namespace Ninject.Activation
         public void IfInstanceIs<T>(Action<T> action)
         {
             if (this.Is<T>())
-                action((T)Instance);
+            {
+                action((T)this.Instance);
+            }
         }
     }
 }

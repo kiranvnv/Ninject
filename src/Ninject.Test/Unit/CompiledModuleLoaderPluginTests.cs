@@ -1,6 +1,4 @@
-﻿#if !NO_MOQ
-#if !NO_ASSEMBLY_SCANNING
-namespace Ninject.Tests.Unit.CompiledModuleLoaderPluginTests
+﻿namespace Ninject.Tests.Unit.CompiledModuleLoaderPluginTests
 {
     using System;
     using System.Collections.Generic;
@@ -16,13 +14,13 @@ namespace Ninject.Tests.Unit.CompiledModuleLoaderPluginTests
     {
         protected readonly CompiledModuleLoaderPlugin loaderPlugin;
         protected readonly Mock<IKernel> kernelMock;
-        protected readonly string moduleFilename = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Ninject.Tests.TestModule.dll");
-        protected readonly string assemblyFilename = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Ninject.Tests.TestAssembly.dll");
+        protected readonly string moduleFilename = Path.Combine(Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath), @"Ninject.Tests.TestModule.dll");
+        protected readonly string assemblyFilename = Path.Combine(Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath), @"Ninject.Tests.TestAssembly.dll");
 
         public CompiledModuleLoaderPluginContext()
         {
-            kernelMock = new Mock<IKernel>();
-            loaderPlugin = new CompiledModuleLoaderPlugin(kernelMock.Object, new AssemblyNameRetriever());
+            this.kernelMock = new Mock<IKernel>();
+            this.loaderPlugin = new CompiledModuleLoaderPlugin(this.kernelMock.Object, new AssemblyNameRetriever());
         }
     }
 
@@ -34,10 +32,10 @@ namespace Ninject.Tests.Unit.CompiledModuleLoaderPluginTests
             var expected = Assembly.LoadFrom(this.moduleFilename).GetName().Name;
 
             IEnumerable<Assembly> actual = null;
-            kernelMock.Setup(x => x.Load(It.IsAny<IEnumerable<Assembly>>()))
+            this.kernelMock.Setup(x => x.Load(It.IsAny<IEnumerable<Assembly>>()))
                       .Callback<IEnumerable<Assembly>>(m => actual = m);
 
-            loaderPlugin.LoadModules(new[] { this.moduleFilename });
+            this.loaderPlugin.LoadModules(new[] { this.moduleFilename });
             actual.Should().NotBeNull();
             actual.Count().Should().Be(1);
             actual.Where(a => a.GetName().Name == expected).Should().NotBeEmpty();
@@ -46,10 +44,8 @@ namespace Ninject.Tests.Unit.CompiledModuleLoaderPluginTests
         [Fact]
         public void DoesNotLoadAssembliesWithoutModules()
         {
-            loaderPlugin.LoadModules(new[] { this.assemblyFilename });
-            kernelMock.Verify(k => k.Load(It.Is<IEnumerable<Assembly>>(p => p.Any())), Times.Never());
+            this.loaderPlugin.LoadModules(new[] { this.assemblyFilename });
+            this.kernelMock.Verify(k => k.Load(It.Is<IEnumerable<Assembly>>(p => p.Any())), Times.Never());
         }
     }
 }
-#endif //!NO_ASSEMBLY_SCANNING
-#endif

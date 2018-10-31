@@ -1,0 +1,45 @@
+configuration: Release
+
+image: Visual Studio 2017
+
+init:
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq "true")
+      {
+          Update-AppveyorBuild -Version "$env:APPVEYOR_REPO_TAG_NAME"
+      }
+      else
+      {
+          Update-AppveyorBuild -Version "4.0.0-alpha$($env:APPVEYOR_BUILD_NUMBER.PadLeft(3, '0'))"
+      }
+
+dotnet_csproj:
+  patch: true
+  file: 'src\Ninject\Ninject.csproj'
+  version: '{version}'
+  package_version: '{version}'
+
+cache:
+  - '%LocalAppData%\NuGet\v3-cache -> **\*.csproj'
+
+before_build:
+  - dotnet restore --verbosity quiet
+
+build:
+  parallel: true
+  verbosity: minimal
+
+test_script:
+  - dotnet test --configuration Release --no-build --collect:"Code Coverage" src\Ninject.Test
+  - nuget install Codecov -x -Verbosity quiet
+  - for /f %%a in ('dir /b /s *.coverage') do Codecov\tools\codecov -f "%%a"
+
+artifacts:
+  - path: 'src\**\*.nupkg'
+
+deploy:
+  provider: NuGet
+  api_key:
+    secure: Sn05A/FiUAlID5v31uaf5EZuYCSo4frLONtrCY+cwY265dU2JUZsl2+sjVeLQyz/
+  on:
+    appveyor_repo_tag: true

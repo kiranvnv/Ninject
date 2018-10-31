@@ -1,12 +1,10 @@
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // <copyright file="Planner.cs" company="Ninject Project Contributors">
-//   Copyright (c) 2007-2009, Enkari, Ltd.
-//   Copyright (c) 2009-2011 Ninject Project Contributors
-//   Authors: Nate Kohari (nate@enkari.com)
-//            Remo Gloor (remo.gloor@gmail.com)
-//           
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
 //   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-//   you may not use this file except in compliance with one of the Licenses.
+//   You may not use this file except in compliance with one of the Licenses.
 //   You may obtain a copy of the License at
 //
 //       http://www.apache.org/licenses/LICENSE-2.0
@@ -19,7 +17,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 // </copyright>
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Planning
 {
@@ -27,6 +25,7 @@ namespace Ninject.Planning
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
+
     using Ninject.Components;
     using Ninject.Infrastructure;
     using Ninject.Infrastructure.Language;
@@ -37,7 +36,7 @@ namespace Ninject.Planning
     /// </summary>
     public class Planner : NinjectComponent, IPlanner
     {
-        private readonly ReaderWriterLock plannerLock = new ReaderWriterLock();
+        private readonly ReaderWriterLockSlim plannerLock = new ReaderWriterLockSlim();
         private readonly Dictionary<Type, IPlan> plans = new Dictionary<Type, IPlan>();
 
         /// <summary>
@@ -47,6 +46,7 @@ namespace Ninject.Planning
         public Planner(IEnumerable<IPlanningStrategy> strategies)
         {
             Ensure.ArgumentNotNull(strategies, "strategies");
+
             this.Strategies = strategies.ToList();
         }
 
@@ -54,7 +54,7 @@ namespace Ninject.Planning
         /// Gets the strategies that contribute to the planning process.
         /// </summary>
         public IList<IPlanningStrategy> Strategies { get; private set; }
-        
+
         /// <summary>
         /// Gets or creates an activation plan for the specified type.
         /// </summary>
@@ -64,15 +64,15 @@ namespace Ninject.Planning
         {
             Ensure.ArgumentNotNull(type, "type");
 
-            this.plannerLock.AcquireReaderLock(Timeout.Infinite);
+            this.plannerLock.EnterUpgradeableReadLock();
+
             try
             {
-                IPlan plan;
-                return this.plans.TryGetValue(type, out plan) ? plan : this.CreateNewPlan(type);
+                return this.plans.TryGetValue(type, out IPlan plan) ? plan : this.CreateNewPlan(type);
             }
             finally
             {
-                this.plannerLock.ReleaseReaderLock();
+                this.plannerLock.ExitUpgradeableReadLock();
             }
         }
 
@@ -84,22 +84,25 @@ namespace Ninject.Planning
         protected virtual IPlan CreateEmptyPlan(Type type)
         {
             Ensure.ArgumentNotNull(type, "type");
+
             return new Plan(type);
         }
 
         /// <summary>
         /// Creates a new plan for the specified type.
-        /// This method requires an active reader lock!
         /// </summary>
         /// <param name="type">The type.</param>
+        /// <remarks>
+        /// This method requires an active write lock.
+        /// </remarks>
         /// <returns>The newly created plan.</returns>
         private IPlan CreateNewPlan(Type type)
         {
-            var lockCooki = this.plannerLock.UpgradeToWriterLock(Timeout.Infinite);
+            this.plannerLock.EnterWriteLock();
+
             try
             {
-                IPlan plan;
-                if (this.plans.TryGetValue(type, out plan))
+                if (this.plans.TryGetValue(type, out IPlan plan))
                 {
                     return plan;
                 }
@@ -112,7 +115,7 @@ namespace Ninject.Planning
             }
             finally
             {
-                this.plannerLock.DowngradeFromWriterLock(ref lockCooki);
+                this.plannerLock.ExitWriteLock();
             }
         }
     }

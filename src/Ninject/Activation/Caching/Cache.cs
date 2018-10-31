@@ -1,15 +1,27 @@
-#region License
-// 
-// Author: Nate Kohari <nate@enkari.com>
-// Copyright (c) 2007-2010, Enkari, Ltd.
-// 
-// Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-// See the file LICENSE.txt for details.
-// 
-#endregion
+// -------------------------------------------------------------------------------------------------
+// <copyright file="Cache.cs" company="Ninject Project Contributors">
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
+//   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
+//   You may not use this file except in compliance with one of the Licenses.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//   or
+//       http://www.microsoft.com/opensource/licenses.mspx
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+// </copyright>
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Activation.Caching
 {
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
 
@@ -27,8 +39,8 @@ namespace Ninject.Activation.Caching
         /// Contains all cached instances.
         /// This is a dictionary of scopes to a multimap for bindings to cache entries.
         /// </summary>
-        private readonly IDictionary<object, Multimap<IBindingConfiguration, CacheEntry>> entries =
-            new Dictionary<object, Multimap<IBindingConfiguration, CacheEntry>>(new WeakReferenceEqualityComparer());
+        private readonly ConcurrentDictionary<object, ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>>> entries =
+           new ConcurrentDictionary<object, ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>>>(new WeakReferenceEqualityComparer());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Cache"/> class.
@@ -60,10 +72,10 @@ namespace Ninject.Activation.Caching
         /// <summary>
         /// Releases resources held by the object.
         /// </summary>
-        /// <param name="disposing"></param>
+        /// <param name="disposing"><c>True</c> if called manually, otherwise by GC.</param>
         public override void Dispose(bool disposing)
         {
-            if (disposing && !IsDisposed)
+            if (disposing && !this.IsDisposed)
             {
                 this.Clear();
             }
@@ -83,21 +95,21 @@ namespace Ninject.Activation.Caching
             var scope = context.GetScope();
             var entry = new CacheEntry(context, reference);
 
-            lock (this.entries)
-            {
-                var weakScopeReference = new ReferenceEqualWeakReference(scope);
-                if (!this.entries.ContainsKey(weakScopeReference))
-                {
-                    this.entries[weakScopeReference] = new Multimap<IBindingConfiguration, CacheEntry>();
-                    var notifyScope = scope as INotifyWhenDisposed;
-                    if (notifyScope != null)
-                    {
-                        notifyScope.Disposed += (o, e) => this.Clear(weakScopeReference);
-                    }
-                }
+            var weakScopeReference = new ReferenceEqualWeakReference(scope);
 
-                this.entries[weakScopeReference].Add(context.Binding.BindingConfiguration, entry);
-            }
+            var scopedEntries = this.entries.GetOrAdd(
+                   weakScopeReference,
+                   key =>
+                   {
+                       if (scope is INotifyWhenDisposed notifyScope)
+                       {
+                           notifyScope.Disposed += (o, e) => this.Clear(weakScopeReference);
+                       }
+
+                       return new ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>>();
+                   });
+
+            scopedEntries.GetOrAdd(context.Binding.BindingConfiguration, new HashSet<CacheEntry>()).Add(entry);
         }
 
         /// <summary>
@@ -108,38 +120,35 @@ namespace Ninject.Activation.Caching
         public object TryGet(IContext context)
         {
             Ensure.ArgumentNotNull(context, "context");
+
             var scope = context.GetScope();
             if (scope == null)
             {
                 return null;
             }
 
-            lock (this.entries)
+            if (!this.entries.TryGetValue(scope, out ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>> bindings))
             {
-                Multimap<IBindingConfiguration, CacheEntry> bindings;
-                if (!this.entries.TryGetValue(scope, out bindings))
-                {
-                    return null;
-                }
-
-                foreach (var entry in bindings[context.Binding.BindingConfiguration])
-                {
-                    if (context.HasInferredGenericArguments)
-                    {
-                        var cachedArguments = entry.Context.GenericArguments;
-                        var arguments = context.GenericArguments;
-
-                        if (!cachedArguments.SequenceEqual(arguments))
-                        {
-                            continue;
-                        }
-                    }
-
-                    return entry.Reference.Instance;
-                }
-
                 return null;
             }
+
+            foreach (var entry in bindings.TryGetValue(context.Binding.BindingConfiguration, out HashSet<CacheEntry> entries) ? entries : Enumerable.Empty<CacheEntry>())
+            {
+                if (context.HasInferredGenericArguments)
+                {
+                    var cachedArguments = entry.Context.GenericArguments;
+                    var arguments = context.GenericArguments;
+
+                    if (!cachedArguments.SequenceEqual(arguments))
+                    {
+                        continue;
+                    }
+                }
+
+                return entry.Reference.Instance;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -149,22 +158,19 @@ namespace Ninject.Activation.Caching
         /// <returns><see langword="True"/> if the instance was found and released; otherwise <see langword="false"/>.</returns>
         public bool Release(object instance)
         {
-            lock(this.entries)
+            var instanceFound = false;
+            foreach (var bindingEntry in this.entries.Values.SelectMany(bindingEntries => bindingEntries.Values).ToList())
             {
-                var instanceFound = false;
-                foreach (var bindingEntry in this.entries.Values.SelectMany(bindingEntries => bindingEntries.Values).ToList())
+                var instanceEntries = bindingEntry.Where(cacheEntry => ReferenceEquals(instance, cacheEntry.Reference.Instance)).ToList();
+                foreach (var cacheEntry in instanceEntries)
                 {
-                    var instanceEntries = bindingEntry.Where(cacheEntry => ReferenceEquals(instance, cacheEntry.Reference.Instance)).ToList();
-                    foreach (var cacheEntry in instanceEntries)
-                    {
-                        this.Forget(cacheEntry);
-                        bindingEntry.Remove(cacheEntry);
-                        instanceFound = true;
-                    }
+                    this.Forget(cacheEntry);
+                    bindingEntry.Remove(cacheEntry);
+                    instanceFound = true;
                 }
-
-                return instanceFound;
             }
+
+            return instanceFound;
         }
 
         /// <summary>
@@ -172,14 +178,10 @@ namespace Ninject.Activation.Caching
         /// </summary>
         public void Prune()
         {
-            lock (this.entries)
+            var disposedScopes = this.entries.Where(scope => !((ReferenceEqualWeakReference)scope.Key).IsAlive).Select(scope => scope).ToList();
+            foreach (var disposedScope in disposedScopes)
             {
-                var disposedScopes = this.entries.Where(scope => !((ReferenceEqualWeakReference)scope.Key).IsAlive).Select(scope => scope).ToList();
-                foreach (var disposedScope in disposedScopes)
-                {
-                    this.entries.Remove(disposedScope.Key);
-                    this.Forget(GetAllBindingEntries(disposedScope.Value));
-                }
+                this.Clear(disposedScope.Key);
             }
         }
 
@@ -190,14 +192,9 @@ namespace Ninject.Activation.Caching
         /// <param name="scope">The scope whose instances should be deactivated.</param>
         public void Clear(object scope)
         {
-            lock (this.entries)
+            if (this.entries.TryRemove(scope, out ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>> bindings))
             {
-                Multimap<IBindingConfiguration, CacheEntry> bindings;
-                if (this.entries.TryGetValue(scope, out bindings))
-                {
-                    this.entries.Remove(scope);
-                    this.Forget(GetAllBindingEntries(bindings));
-                }
+                this.Forget(bindings.SelectMany(b => b.Value));
             }
         }
 
@@ -206,21 +203,18 @@ namespace Ninject.Activation.Caching
         /// </summary>
         public void Clear()
         {
-            lock (this.entries)
-            {
-                this.Forget(this.GetAllCacheEntries());
-                this.entries.Clear();
-            }
+            this.Forget(this.GetAllCacheEntries());
+            this.entries.Clear();
         }
 
         /// <summary>
-        /// Gets all entries for a binding withing the selected scope.
+        /// Gets all entries for a binding within the selected scope.
         /// </summary>
         /// <param name="bindings">The bindings.</param>
         /// <returns>All bindings of a binding.</returns>
-        private static IEnumerable<CacheEntry> GetAllBindingEntries(IEnumerable<KeyValuePair<IBindingConfiguration, ICollection<CacheEntry>>> bindings)
+        private static IEnumerable<CacheEntry> GetAllBindingEntries(ConcurrentDictionary<IBindingConfiguration, HashSet<CacheEntry>> bindings)
         {
-            return bindings.SelectMany(bindingEntries => bindingEntries.Value);
+            return bindings.Values.SelectMany(bindingEntries => bindingEntries);
         }
 
         /// <summary>
@@ -268,7 +262,7 @@ namespace Ninject.Activation.Caching
             {
                 this.Context = context;
                 this.Reference = reference;
-           }
+            }
 
             /// <summary>
             /// Gets the context of the instance.

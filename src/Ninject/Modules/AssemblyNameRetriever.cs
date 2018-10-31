@@ -1,10 +1,10 @@
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // <copyright file="AssemblyNameRetriever.cs" company="Ninject Project Contributors">
-//   Copyright (c) 2009-2011 Ninject Project Contributors
-//   Authors: Remo Gloor (remo.gloor@gmail.com)
-//           
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
 //   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-//   you may not use this file except in compliance with one of the Licenses.
+//   You may not use this file except in compliance with one of the Licenses.
 //   You may obtain a copy of the License at
 //
 //       http://www.apache.org/licenses/LICENSE-2.0
@@ -17,9 +17,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 // </copyright>
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-#if !NO_ASSEMBLY_SCANNING
 namespace Ninject.Modules
 {
     using System;
@@ -43,6 +42,7 @@ namespace Ninject.Modules
         /// <returns>All assembly names of the assemblies in the given files that match the filter.</returns>
         public IEnumerable<AssemblyName> GetAssemblyNames(IEnumerable<string> filenames, Predicate<Assembly> filter)
         {
+#if !NO_ASSEMBLY_SCANNING
             var assemblyCheckerType = typeof(AssemblyChecker);
             var temporaryDomain = CreateTemporaryAppDomain();
             try
@@ -57,8 +57,12 @@ namespace Ninject.Modules
             {
                 AppDomain.Unload(temporaryDomain);
             }
+#else
+            return new AssemblyChecker().GetAssemblyNames(filenames, filter);
+#endif
         }
 
+#if !NO_ASSEMBLY_SCANNING
         /// <summary>
         /// Creates a temporary app domain.
         /// </summary>
@@ -70,6 +74,7 @@ namespace Ninject.Modules
                 AppDomain.CurrentDomain.Evidence,
                 AppDomain.CurrentDomain.SetupInformation);
         }
+#endif
 
         /// <summary>
         /// This class is loaded into the temporary appdomain to load and check if the assemblies match the filter.
@@ -105,6 +110,10 @@ namespace Ninject.Modules
                         {
                             assembly = Assembly.Load(filename);
                         }
+                        catch (FileLoadException)
+                        {
+                            continue;
+                        }
                         catch (FileNotFoundException)
                         {
                             continue;
@@ -122,4 +131,3 @@ namespace Ninject.Modules
         }
     }
 }
-#endif

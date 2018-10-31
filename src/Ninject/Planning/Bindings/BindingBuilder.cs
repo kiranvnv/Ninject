@@ -1,12 +1,10 @@
-﻿//-------------------------------------------------------------------------------
+﻿// -------------------------------------------------------------------------------------------------
 // <copyright file="BindingBuilder.cs" company="Ninject Project Contributors">
-//   Copyright (c) 2007-2009, Enkari, Ltd.
-//   Copyright (c) 2009-2011 Ninject Project Contributors
-//   Authors: Nate Kohari (nate@enkari.com)
-//            Remo Gloor (remo.gloor@gmail.com)
-//           
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
 //   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-//   you may not use this file except in compliance with one of the Licenses.
+//   You may not use this file except in compliance with one of the Licenses.
 //   You may obtain a copy of the License at
 //
 //       http://www.apache.org/licenses/LICENSE-2.0
@@ -19,18 +17,18 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 // </copyright>
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Planning.Bindings
 {
     using System;
-#if !NETCF
     using System.Linq.Expressions;
-#endif
+
     using Ninject.Activation;
     using Ninject.Activation.Providers;
     using Ninject.Infrastructure;
     using Ninject.Parameters;
+    using Ninject.Selection.Heuristics;
     using Ninject.Syntax;
 
     /// <summary>
@@ -42,16 +40,24 @@ namespace Ninject.Planning.Bindings
         /// Initializes a new instance of the <see cref="BindingBuilder"/> class.
         /// </summary>
         /// <param name="bindingConfiguration">The binding to build.</param>
-        /// <param name="kernel">The kernel.</param>
+        /// <param name="planner">The <see cref="IPlanner"/> component.</param>
+        /// <param name="constructorScorer">The <see cref="IConstructorScorer"/> component.</param>
         /// <param name="serviceNames">The names of the services.</param>
-        public BindingBuilder(IBindingConfiguration bindingConfiguration, IKernel kernel, string serviceNames)
+        public BindingBuilder(
+            IBindingConfiguration bindingConfiguration,
+            IPlanner planner,
+            IConstructorScorer constructorScorer,
+            string serviceNames)
         {
-            Ensure.ArgumentNotNull(bindingConfiguration, "binding");
-            Ensure.ArgumentNotNull(kernel, "kernel");
+            Ensure.ArgumentNotNull(bindingConfiguration, "bindingConfiguration");
+            Ensure.ArgumentNotNull(planner, "planner");
+            Ensure.ArgumentNotNull(constructorScorer, "constructorScorer");
+            Ensure.ArgumentNotNull(serviceNames, "serviceNames");
+
             this.BindingConfiguration = bindingConfiguration;
-            this.Kernel = kernel;
+            this.Planner = planner;
+            this.ConstructorScorer = constructorScorer;
             this.ServiceNames = serviceNames;
-            this.BindingConfiguration.ScopeCallback = kernel.Settings.DefaultScopeCallback;
         }
 
         /// <summary>
@@ -60,9 +66,14 @@ namespace Ninject.Planning.Bindings
         public IBindingConfiguration BindingConfiguration { get; private set; }
 
         /// <summary>
-        /// Gets the kernel.
+        /// Gets the <see cref="IPlanner"/> component.
         /// </summary>
-        public IKernel Kernel { get; private set; }
+        protected IPlanner Planner { get; private set; }
+
+        /// <summary>
+        /// Gets the <see cref="IConstructorScorer"/> component.
+        /// </summary>
+        protected IConstructorScorer ConstructorScorer { get; private set; }
 
         /// <summary>
         /// Gets the names of the services.
@@ -88,25 +99,25 @@ namespace Ninject.Planning.Bindings
         /// <returns>The fluent syntax.</returns>
         protected IBindingWhenInNamedWithOrOnSyntax<T> InternalTo<T>(Type implementation)
         {
-            this.BindingConfiguration.ProviderCallback = StandardProvider.GetCreationCallback(implementation);
+            this.BindingConfiguration.ProviderCallback = ctx => new StandardProvider(implementation, this.Planner, this.ConstructorScorer);
             this.BindingConfiguration.Target = BindingTarget.Type;
 
-            return new BindingConfigurationBuilder<T>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<T>(this.BindingConfiguration, this.ServiceNames);
         }
-        
+
         /// <summary>
         /// Indicates that the service should be bound to the specified constant value.
         /// </summary>
         /// <typeparam name="TImplementation">The type of the implementation.</typeparam>
         /// <param name="value">The constant value.</param>
         /// <returns>The fluent syntax.</returns>
-        protected IBindingWhenInNamedWithOrOnSyntax<TImplementation> InternalToConfiguration<TImplementation>(TImplementation value) 
+        protected IBindingWhenInNamedWithOrOnSyntax<TImplementation> InternalToConfiguration<TImplementation>(TImplementation value)
         {
             this.BindingConfiguration.ProviderCallback = ctx => new ConstantProvider<TImplementation>(value);
             this.BindingConfiguration.Target = BindingTarget.Constant;
             this.BindingConfiguration.ScopeCallback = StandardScopeCallbacks.Singleton;
 
-            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
@@ -120,7 +131,7 @@ namespace Ninject.Planning.Bindings
             this.BindingConfiguration.ProviderCallback = ctx => new CallbackProvider<TImplementation>(method);
             this.BindingConfiguration.Target = BindingTarget.Method;
 
-            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
@@ -134,7 +145,7 @@ namespace Ninject.Planning.Bindings
             this.BindingConfiguration.ProviderCallback = ctx => provider;
             this.BindingConfiguration.Target = BindingTarget.Provider;
 
-            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
@@ -150,14 +161,14 @@ namespace Ninject.Planning.Bindings
             this.BindingConfiguration.ProviderCallback = ctx => ctx.Kernel.Get<TProvider>();
             this.BindingConfiguration.Target = BindingTarget.Provider;
 
-            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
         /// Indicates that the service should be bound to an instance of the specified provider type.
         /// The instance will be activated via the kernel when an instance of the service is activated.
         /// </summary>
-        /// <typeparam name="T">The type of the returned fleunt syntax</typeparam>
+        /// <typeparam name="T">The type of the returned fluent syntax.</typeparam>
         /// <param name="providerType">The type of provider to activate.</param>
         /// <returns>The fluent syntax.</returns>
         protected IBindingWhenInNamedWithOrOnSyntax<T> ToProviderInternal<T>(Type providerType)
@@ -165,12 +176,11 @@ namespace Ninject.Planning.Bindings
             this.BindingConfiguration.ProviderCallback = ctx => ctx.Kernel.Get(providerType) as IProvider;
             this.BindingConfiguration.Target = BindingTarget.Provider;
 
-            return new BindingConfigurationBuilder<T>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<T>(this.BindingConfiguration, this.ServiceNames);
         }
 
-#if !NETCF
         /// <summary>
-        /// Indicates that the service should be bound to the speecified constructor.
+        /// Indicates that the service should be bound to the specified constructor.
         /// </summary>
         /// <typeparam name="TImplementation">The type of the implementation.</typeparam>
         /// <param name="newExpression">The expression that specifies the constructor.</param>
@@ -178,17 +188,16 @@ namespace Ninject.Planning.Bindings
         protected IBindingWhenInNamedWithOrOnSyntax<TImplementation> InternalToConstructor<TImplementation>(
             Expression<Func<IConstructorArgumentSyntax, TImplementation>> newExpression)
         {
-            var ctorExpression = newExpression.Body as NewExpression;
-            if (ctorExpression == null)
+            if (!(newExpression.Body is NewExpression ctorExpression))
             {
-                throw new ArgumentException("The expression must be a constructor call.", "newExpression");
+                throw new ArgumentException("The expression must be a constructor call.", nameof(newExpression));
             }
 
-            this.BindingConfiguration.ProviderCallback = StandardProvider.GetCreationCallback(ctorExpression.Type, ctorExpression.Constructor);
+            this.BindingConfiguration.ProviderCallback = ctx => new StandardProvider(ctorExpression.Type, this.Planner, new SpecificConstructorSelector(ctorExpression.Constructor));
             this.BindingConfiguration.Target = BindingTarget.Type;
             this.AddConstructorArguments(ctorExpression, newExpression.Parameters[0]);
 
-            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<TImplementation>(this.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
@@ -217,8 +226,7 @@ namespace Ninject.Planning.Bindings
         /// <param name="constructorArgumentSyntaxParameterExpression">The constructor argument syntax parameter expression.</param>
         private void AddConstructorArgument(Expression argument, string argumentName, ParameterExpression constructorArgumentSyntaxParameterExpression)
         {
-            var methodCall = argument as MethodCallExpression;
-            if (methodCall == null ||
+            if (!(argument is MethodCallExpression methodCall) ||
                 !methodCall.Method.IsGenericMethod ||
                 methodCall.Method.GetGenericMethodDefinition().DeclaringType != typeof(IConstructorArgumentSyntax))
             {
@@ -256,13 +264,12 @@ namespace Ninject.Planning.Bindings
             /// <summary>
             /// Specifies that the argument is injected.
             /// </summary>
-            /// <typeparam name="T1">The type of the parameter</typeparam>
+            /// <typeparam name="T1">The type of the parameter.</typeparam>
             /// <returns>Not used. This interface has no implementation.</returns>
             public T1 Inject<T1>()
             {
                 throw new InvalidOperationException("This method is for declaration that a parameter shall be injected only! Never call it directly.");
             }
         }
-#endif
     }
 }

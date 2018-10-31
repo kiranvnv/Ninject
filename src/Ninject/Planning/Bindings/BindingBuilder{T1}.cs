@@ -1,12 +1,10 @@
-﻿//-------------------------------------------------------------------------------
+﻿// -------------------------------------------------------------------------------------------------
 // <copyright file="BindingBuilder{T1}.cs" company="Ninject Project Contributors">
-//   Copyright (c) 2007-2009, Enkari, Ltd.
-//   Copyright (c) 2009-2011 Ninject Project Contributors
-//   Authors: Nate Kohari (nate@enkari.com)
-//            Remo Gloor (remo.gloor@gmail.com)
-//           
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
 //   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-//   you may not use this file except in compliance with one of the Licenses.
+//   You may not use this file except in compliance with one of the Licenses.
 //   You may obtain a copy of the License at
 //
 //       http://www.apache.org/licenses/LICENSE-2.0
@@ -19,17 +17,17 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 // </copyright>
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Planning.Bindings
 {
     using System;
-#if !NETCF
     using System.Linq.Expressions;
-#endif    
+
     using Ninject.Activation;
     using Ninject.Activation.Providers;
     using Ninject.Infrastructure;
+    using Ninject.Selection.Heuristics;
     using Ninject.Syntax;
 
     /// <summary>
@@ -38,37 +36,44 @@ namespace Ninject.Planning.Bindings
     /// <typeparam name="T1">The service type.</typeparam>
     public class BindingBuilder<T1> : BindingBuilder, IBindingToSyntax<T1>
     {
-#pragma warning disable 1584 //mono compiler bug
         /// <summary>
         /// Initializes a new instance of the <see cref="BindingBuilder{T1}"/> class.
         /// </summary>
         /// <param name="binding">The binding to build.</param>
-        /// <param name="kernel">The kernel.</param>
+        /// <param name="planner">The <see cref="IPlanner"/> component.</param>
+        /// <param name="constructorScorer">The <see cref="IConstructorScorer"/> component.</param>
         /// <param name="serviceNames">The names of the services.</param>
-        public BindingBuilder(IBinding binding, IKernel kernel, string serviceNames)
-            : base(binding.BindingConfiguration, kernel, serviceNames)
+        public BindingBuilder(
+            IBinding binding,
+            IPlanner planner,
+            IConstructorScorer constructorScorer,
+            string serviceNames)
+            : base(
+                  binding.BindingConfiguration,
+                  planner,
+                  constructorScorer,
+                  serviceNames)
         {
             Ensure.ArgumentNotNull(binding, "binding");
-            Ensure.ArgumentNotNull(kernel, "kernel");
+
             this.Binding = binding;
         }
-#pragma warning restore 1584
 
         /// <summary>
         /// Gets the binding being built.
         /// </summary>
         public IBinding Binding { get; private set; }
-      
+
         /// <summary>
         /// Indicates that the service should be self-bound.
         /// </summary>
         /// <returns>The fluent syntax.</returns>
         public IBindingWhenInNamedWithOrOnSyntax<T1> ToSelf()
         {
-            this.Binding.ProviderCallback = StandardProvider.GetCreationCallback(this.Binding.Service);
+            this.Binding.ProviderCallback = ctx => new StandardProvider(this.Binding.Service, this.Planner, this.ConstructorScorer);
             this.Binding.Target = BindingTarget.Self;
 
-            return new BindingConfigurationBuilder<T1>(this.Binding.BindingConfiguration, this.ServiceNames, this.Kernel);
+            return new BindingConfigurationBuilder<T1>(this.Binding.BindingConfiguration, this.ServiceNames);
         }
 
         /// <summary>
@@ -92,9 +97,8 @@ namespace Ninject.Planning.Bindings
             return this.InternalTo<T1>(implementation);
         }
 
-#if !NETCF
         /// <summary>
-        /// Indicates that the service should be bound to the speecified constructor.
+        /// Indicates that the service should be bound to the specified constructor.
         /// </summary>
         /// <typeparam name="TImplementation">The type of the implementation.</typeparam>
         /// <param name="newExpression">The expression that specifies the constructor.</param>
@@ -105,7 +109,6 @@ namespace Ninject.Planning.Bindings
         {
             return this.InternalToConstructor(newExpression);
         }
-#endif
 
         /// <summary>
         /// Indicates that the service should be bound to an instance of the specified provider type.

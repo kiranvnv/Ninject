@@ -1,5 +1,4 @@
-﻿#if !NO_MOQ
-namespace Ninject.Tests.Unit.BindingActionStrategyTests
+﻿namespace Ninject.Tests.Unit.BindingActionStrategyTests
 {
     using System;
     using FluentAssertions;
@@ -31,13 +30,13 @@ namespace Ninject.Tests.Unit.BindingActionStrategyTests
             bool action1WasCalled = false;
             bool action2WasCalled = false;
 
-            Action<IContext, object> action1 = (ctx, c) => action1WasCalled = ctx == contextMock.Object;
-            Action<IContext, object> action2 = (ctx, c) => action2WasCalled = ctx == contextMock.Object;
+            Action<IContext, object> action1 = (ctx, c) => action1WasCalled = ctx == this.contextMock.Object;
+            Action<IContext, object> action2 = (ctx, c) => action2WasCalled = ctx == this.contextMock.Object;
             var actions = new[] { action1, action2 };
 
-            contextMock.SetupGet(x => x.Binding).Returns(bindingMock.Object);
-            bindingMock.SetupGet(x => x.ActivationActions).Returns(actions);
-            strategy.Activate(contextMock.Object, new InstanceReference());
+            this.contextMock.SetupGet(x => x.Binding).Returns(this.bindingMock.Object);
+            this.bindingMock.SetupGet(x => x.ActivationActions).Returns(actions);
+            this.strategy.Activate(this.contextMock.Object, new InstanceReference());
 
             action1WasCalled.Should().BeTrue();
             action2WasCalled.Should().BeTrue();
@@ -52,17 +51,16 @@ namespace Ninject.Tests.Unit.BindingActionStrategyTests
             bool action1WasCalled = false;
             bool action2WasCalled = false;
 
-            Action<IContext, object> action1 = (ctx, c) => action1WasCalled = ctx == contextMock.Object;
-            Action<IContext, object> action2 = (ctx, c) => action2WasCalled = ctx == contextMock.Object;
+            Action<IContext, object> action1 = (ctx, c) => action1WasCalled = ctx == this.contextMock.Object;
+            Action<IContext, object> action2 = (ctx, c) => action2WasCalled = ctx == this.contextMock.Object;
             var actions = new[] { action1, action2 };
 
-            contextMock.SetupGet(x => x.Binding).Returns(bindingMock.Object);
-            bindingMock.SetupGet(x => x.DeactivationActions).Returns(actions);
-            strategy.Deactivate(contextMock.Object, new InstanceReference());
+            this.contextMock.SetupGet(x => x.Binding).Returns(this.bindingMock.Object);
+            this.bindingMock.SetupGet(x => x.DeactivationActions).Returns(actions);
+            this.strategy.Deactivate(this.contextMock.Object, new InstanceReference());
 
             action1WasCalled.Should().BeTrue();
             action2WasCalled.Should().BeTrue();
         }
     }
 }
-#endif

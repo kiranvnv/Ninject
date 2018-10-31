@@ -8,16 +8,16 @@
 
     public class SpecialResolutionContext : IDisposable
     {
-        protected StandardKernel kernel;
+        protected IKernelConfiguration kernelConfiguration;
 
         public SpecialResolutionContext()
         {
-            this.kernel = new StandardKernel();
+            this.kernelConfiguration = new KernelConfiguration();
         }
 
         public void Dispose()
         {
-            this.kernel.Dispose();
+            this.kernelConfiguration.Dispose();
         }
     }
 
@@ -26,7 +26,9 @@
         [Fact]
         public void InstanceOfKernelIsInjected()
         {
-            kernel.Bind<RequestsKernel>().ToSelf();
+            this.kernelConfiguration.Bind<RequestsKernel>().ToSelf();
+            var kernel = this.kernelConfiguration.BuildReadOnlyKernel();
+
             var instance = kernel.Get<RequestsKernel>();
 
             instance.Should().NotBeNull();
@@ -40,7 +42,9 @@
         [Fact]
         public void InstanceOfKernelIsInjected()
         {
-            kernel.Bind<RequestsResolutionRoot>().ToSelf();
+            this.kernelConfiguration.Bind<RequestsResolutionRoot>().ToSelf();
+            var kernel = this.kernelConfiguration.BuildReadOnlyKernel();
+
             var instance = kernel.Get<RequestsResolutionRoot>();
 
             instance.Should().NotBeNull();
@@ -54,18 +58,20 @@
         [Fact]
         public void InstanceOfStringIsInjected()
         {
-            kernel.Bind<RequestsString>().ToSelf();
+            this.kernelConfiguration.Bind<RequestsString>().ToSelf();
+            var kernel = this.kernelConfiguration.BuildReadOnlyKernel();
+
             Assert.Throws<ActivationException>(() => kernel.Get<RequestsString>());
         }
     }
 
     public class RequestsKernel
     {
-        public IKernel Kernel { get; set; }
+        public IReadOnlyKernel Kernel { get; set; }
 
-        public RequestsKernel(IKernel kernel)
+        public RequestsKernel(IReadOnlyKernel kernel)
         {
-            Kernel = kernel;
+            this.Kernel = kernel;
         }
     }
 
@@ -85,7 +91,7 @@
 
         public RequestsString(string stringValue)
         {
-            StringValue = stringValue;
+            this.StringValue = stringValue;
         }
     }
 }

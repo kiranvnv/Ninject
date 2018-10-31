@@ -1,4 +1,3 @@
-#if !NO_MOQ
 namespace Ninject.Tests.Unit.CacheTests
 {
     using System;
@@ -22,17 +21,11 @@ namespace Ninject.Tests.Unit.CacheTests
 
         public WhenPruneIsCalled()
         {
-            this.SetUp();
-        }
-
-        public void SetUp()
-        {
             this.cachePrunerMock = new Mock<ICachePruner>();
             this.bindingConfigurationMock = new Mock<IBindingConfiguration>();
             this.cache = new Cache(new PipelineMock(), this.cachePrunerMock.Object);
         }
 
-#if !MONO
         [Fact]
         public void CollectedScopeInstancesAreRemoved()
         {
@@ -43,14 +36,20 @@ namespace Ninject.Tests.Unit.CacheTests
 
             sword = null;
             context = null;
+
             GC.Collect();
-            cache.Prune();
-            
+            GC.WaitForPendingFinalizers();
             GC.Collect();
+
+            this.cache.Prune();
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
             bool swordCollected = !swordWeakReference.IsAlive;
             swordCollected.Should().BeTrue();
         }
-#endif
 
         [Fact]
         public void UncollectedScopeInstancesAreNotRemoved()
@@ -58,9 +57,12 @@ namespace Ninject.Tests.Unit.CacheTests
             var sword = new Sword();
             var swordWeakReference = new WeakReference(sword);
             var context = CreateContextMock(new TestObject(42), this.bindingConfigurationMock.Object);
-
             this.Remember(sword, context);
+
             GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
             bool swordCollected = !swordWeakReference.IsAlive;
 
             swordCollected.Should().BeFalse();
@@ -131,13 +133,20 @@ namespace Ninject.Tests.Unit.CacheTests
             throw new NotImplementedException();
         }
 
-        public IKernel Kernel { get; set; }
+        public void BuildPlan(Type type)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IReadOnlyKernel Kernel { get; set; }
 
         public IRequest Request { get; set; }
 
         public IBinding Binding { get; private set; }
 
         public IPlan Plan { get; set; }
+
+        public ICache Cache { get; private set; }
 
         public ICollection<IParameter> Parameters { get; set; }
 
@@ -156,4 +165,3 @@ namespace Ninject.Tests.Unit.CacheTests
         }
     }
 }
-#endif

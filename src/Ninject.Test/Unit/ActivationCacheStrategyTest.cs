@@ -1,4 +1,3 @@
-#if !NO_MOQ
 namespace Ninject.Tests.Unit
 {
     using Moq;
@@ -19,7 +18,7 @@ namespace Ninject.Tests.Unit
         {
             this.activationCacheMock = new Mock<IActivationCache>();
             this.settings = new NinjectSettings();
-            this.testee = new ActivationCacheStrategy(this.activationCacheMock.Object) { Settings = this.settings };
+            this.testee = new ActivationCacheStrategy(this.activationCacheMock.Object);
         }
 
         [Fact]
@@ -69,4 +68,3 @@ namespace Ninject.Tests.Unit
         }
     }
 }
-#endif

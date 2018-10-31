@@ -1,4 +1,10 @@
-# Ninject [![NuGet Version](http://img.shields.io/nuget/v/Ninject.svg?style=flat)](https://www.nuget.org/packages/Ninject/) [![NuGet Downloads](http://img.shields.io/nuget/dt/Ninject.svg?style=flat)](https://www.nuget.org/packages/Ninject/)
+# Ninject 
+
+[![Build status](https://ci.appveyor.com/api/projects/status/vf412wymbva3x3nv?svg=true)](https://ci.appveyor.com/project/Ninject/ninject)
+[![codecov](https://codecov.io/gh/ninject/Ninject/branch/master/graph/badge.svg)](https://codecov.io/gh/ninject/Ninject)
+[![NuGet Version](http://img.shields.io/nuget/v/Ninject.svg?style=flat)](https://www.nuget.org/packages/Ninject/) 
+[![NuGet Downloads](http://img.shields.io/nuget/dt/Ninject.svg?style=flat)](https://www.nuget.org/packages/Ninject/)
+
 Ninject is a lightning-fast, ultra-lightweight dependency injector for .NET applications. It helps you split your
 application into a collection of loosely-coupled, highly-cohesive pieces, and then glue them back together in a
 flexible manner. By using Ninject to support your software's architecture, your code will become easier to write,
@@ -36,7 +42,7 @@ public class WarriorModule : NinjectModule
    single assembly with no dependencies outside the .NET base class library. This single assembly's footprint is approximately
    85KB when compiled for release.
    
-3. **Fast.** Instead of relying on reflection for invocation, Ninject takes advantage of lightweight code generation in the CLR.
+3. **Fast.** Instead of relying on reflection for invocation, Ninject takes advantage of lambda expression build system.
    This can result in a dramatic (8-50x) improvement in performance in many situations.
    
 4. **Precise.** Ninject helps developers get things right the first time around. Rather than relying on XML mapping files and
@@ -67,13 +73,10 @@ encouraged to evaluate both to determine which best fits your intended use.
 
 Refer to [LICENSE.txt](https://github.com/ninject/ninject/blob/master/LICENSE.txt) for detailed information.
 
-## CI build status
-[![Build Status](https://teamcity.bbv.ch/app/rest/builds/buildType:(id:bt7)/statusIcon)](http://teamcity.bbv.ch/viewType.html?buildTypeId=bt7&guest=1)
-
 ## Changes history
 - [Changes in Ninject 3](https://github.com/ninject/ninject/wiki/Changes-in-Ninject-3)
 - [Changes in Ninject 2](https://github.com/ninject/ninject/wiki/Changes-in-Ninject-2)
-- [Detailed release notes](https://github.com/ninject/ninject/blob/master/ReleaseNotes.md)
+- [Detailed change log](https://github.com/ninject/ninject/blob/master/CHANGELOG.md)
 
 ## Resources
 - [Project website](http://ninject.org/)

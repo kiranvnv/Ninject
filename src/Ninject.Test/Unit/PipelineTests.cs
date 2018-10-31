@@ -1,5 +1,4 @@
-﻿#if !NO_MOQ
-namespace Ninject.Tests.Unit.PipelineTests
+﻿namespace Ninject.Tests.Unit.PipelineTests
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -8,6 +7,7 @@ namespace Ninject.Tests.Unit.PipelineTests
     using Ninject.Activation;
     using Ninject.Activation.Caching;    
     using Ninject.Activation.Strategies;
+    using Ninject.Infrastructure.Language;
     using Xunit;
 
     public class PipelineContext
@@ -54,7 +54,7 @@ namespace Ninject.Tests.Unit.PipelineTests
         }
 
         [Fact]
-        public void WhenAlreadyActiavatedNothingHappens()
+        public void WhenAlreadyActivatedNothingHappens()
         {
             var contextMock = new Mock<IContext>();
             var reference = new InstanceReference();
@@ -80,7 +80,7 @@ namespace Ninject.Tests.Unit.PipelineTests
         }
 
         [Fact]
-        public void WhenAlreadyDeactiavatedNothingHappens()
+        public void WhenAlreadyDeactivatedNothingHappens()
         {
             var contextMock = new Mock<IContext>();
             var reference = new InstanceReference();
@@ -92,4 +92,3 @@ namespace Ninject.Tests.Unit.PipelineTests
         }
     }
 }
-#endif

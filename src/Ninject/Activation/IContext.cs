@@ -1,22 +1,34 @@
-#region License
-// 
-// Author: Nate Kohari <nate@enkari.com>
-// Copyright (c) 2007-2010, Enkari, Ltd.
-// 
-// Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-// See the file LICENSE.txt for details.
-// 
-#endregion
-#region Using Directives
-using System;
-using System.Collections.Generic;
-using Ninject.Parameters;
-using Ninject.Planning;
-using Ninject.Planning.Bindings;
-#endregion
+// -------------------------------------------------------------------------------------------------
+// <copyright file="IContext.cs" company="Ninject Project Contributors">
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
+//   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
+//   You may not use this file except in compliance with one of the Licenses.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//   or
+//       http://www.microsoft.com/opensource/licenses.mspx
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+// </copyright>
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Activation
 {
+    using System;
+    using System.Collections.Generic;
+
+    using Ninject.Activation.Caching;
+    using Ninject.Parameters;
+    using Ninject.Planning;
+    using Ninject.Planning.Bindings;
+
     /// <summary>
     /// Contains information about the activation of a single instance.
     /// </summary>
@@ -25,7 +37,7 @@ namespace Ninject.Activation
         /// <summary>
         /// Gets the kernel that is driving the activation.
         /// </summary>
-        IKernel Kernel { get; }
+        IReadOnlyKernel Kernel { get; }
 
         /// <summary>
         /// Gets the request.
@@ -41,6 +53,11 @@ namespace Ninject.Activation
         /// Gets or sets the activation plan.
         /// </summary>
         IPlan Plan { get; set; }
+
+        /// <summary>
+        /// Gets the cache component.
+        /// </summary>
+        ICache Cache { get; }
 
         /// <summary>
         /// Gets the parameters that were passed to manipulate the activation process.

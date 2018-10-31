@@ -1,25 +1,35 @@
-#region License
-// 
-// Author: Nate Kohari <nate@enkari.com>
-// Copyright (c) 2007-2010, Enkari, Ltd.
-// 
-// Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-// See the file LICENSE.txt for details.
-// 
-#endregion
-#region Using Directives
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Ninject.Activation;
-using Ninject.Infrastructure;
-using Ninject.Parameters;
-using Ninject.Planning.Bindings;
-using Ninject.Syntax;
-#endregion
+// -------------------------------------------------------------------------------------------------
+// <copyright file="ResolutionExtensions.cs" company="Ninject Project Contributors">
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
+//   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
+//   You may not use this file except in compliance with one of the Licenses.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//   or
+//       http://www.microsoft.com/opensource/licenses.mspx
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+// </copyright>
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
+    using Ninject.Infrastructure;
+    using Ninject.Parameters;
+    using Ninject.Planning.Bindings;
+    using Ninject.Syntax;
+
     /// <summary>
     /// Extensions that enhance resolution of services.
     /// </summary>
@@ -297,7 +307,7 @@ namespace Ninject
         /// <typeparam name="T">The service to resolve.</typeparam>
         /// <param name="root">The resolution root.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
         public static bool CanResolve<T>(this IResolutionRoot root, params IParameter[] parameters)
         {
             return CanResolve(root, typeof(T), null, parameters, false, true);
@@ -310,7 +320,7 @@ namespace Ninject
         /// <param name="root">The resolution root.</param>
         /// <param name="name">The name of the binding.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
         public static bool CanResolve<T>(this IResolutionRoot root, string name, params IParameter[] parameters)
         {
             return CanResolve(root, typeof(T), b => b.Name == name, parameters, false, true);
@@ -323,7 +333,7 @@ namespace Ninject
         /// <param name="root">The resolution root.</param>
         /// <param name="constraint">The constraint to apply to the binding.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
         public static bool CanResolve<T>(this IResolutionRoot root, Func<IBindingMetadata, bool> constraint, params IParameter[] parameters)
         {
             return CanResolve(root, typeof(T), constraint, parameters, false, true);
@@ -335,8 +345,8 @@ namespace Ninject
         /// <param name="root">The resolution root.</param>
         /// <param name="service">The service to resolve.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
-        public static object CanResolve(this IResolutionRoot root, Type service, params IParameter[] parameters)
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
+        public static bool CanResolve(this IResolutionRoot root, Type service, params IParameter[] parameters)
         {
             return CanResolve(root, service, null, parameters, false, true);
         }
@@ -348,8 +358,8 @@ namespace Ninject
         /// <param name="service">The service to resolve.</param>
         /// <param name="name">The name of the binding.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
-        public static object CanResolve(this IResolutionRoot root, Type service, string name, params IParameter[] parameters)
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
+        public static bool CanResolve(this IResolutionRoot root, Type service, string name, params IParameter[] parameters)
         {
             return CanResolve(root, service, b => b.Name == name, parameters, false, true);
         }
@@ -361,8 +371,8 @@ namespace Ninject
         /// <param name="service">The service to resolve.</param>
         /// <param name="constraint">The constraint to apply to the binding.</param>
         /// <param name="parameters">The parameters to pass to the request.</param>
-        /// <returns>An instance of the service.</returns>
-        public static object CanResolve(this IResolutionRoot root, Type service, Func<IBindingMetadata, bool> constraint, params IParameter[] parameters)
+        /// <returns><c>True</c> if the request can be resolved; otherwise, <c>false</c>.</returns>
+        public static bool CanResolve(this IResolutionRoot root, Type service, Func<IBindingMetadata, bool> constraint, params IParameter[] parameters)
         {
             return CanResolve(root, service, constraint, parameters, false, true);
         }
@@ -373,7 +383,7 @@ namespace Ninject
             Ensure.ArgumentNotNull(service, "service");
             Ensure.ArgumentNotNull(parameters, "parameters");
 
-            IRequest request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
+            var request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
             return root.CanResolve(request);
         }
 
@@ -383,17 +393,17 @@ namespace Ninject
             Ensure.ArgumentNotNull(service, "service");
             Ensure.ArgumentNotNull(parameters, "parameters");
 
-            IRequest request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
+            var request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
             return root.Resolve(request);
         }
-        
+
         private static IEnumerable<object> GetResolutionIterator(IResolutionRoot root, Type service, Func<IBindingMetadata, bool> constraint, IEnumerable<IParameter> parameters, bool isOptional, bool isUnique, bool forceUnique)
         {
             Ensure.ArgumentNotNull(root, "root");
             Ensure.ArgumentNotNull(service, "service");
             Ensure.ArgumentNotNull(parameters, "parameters");
 
-            IRequest request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
+            var request = root.CreateRequest(service, constraint, parameters, isOptional, isUnique);
             request.ForceUnique = forceUnique;
             return root.Resolve(request);
         }

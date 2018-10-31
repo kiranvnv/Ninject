@@ -1,5 +1,4 @@
-﻿#if !NO_MOQ
-namespace Ninject.Tests.Unit.ActivationBlockTests
+﻿namespace Ninject.Tests.Unit.ActivationBlockTests
 {
     using Moq;
     using Ninject.Activation;
@@ -26,17 +25,17 @@ namespace Ninject.Tests.Unit.ActivationBlockTests
         [Fact]
         public void DelegatesCallToParent()
         {
-            IRequest request = requestMock.Object;
-            block.CanResolve(request);
-            parentMock.Verify(x => x.CanResolve(request));
+            IRequest request = this.requestMock.Object;
+            this.block.CanResolve(request);
+            this.parentMock.Verify(x => x.CanResolve(request));
         }
     
         [Fact]
         public void DelegatesCallToParent2()
         {
-            IRequest request = requestMock.Object;
-            block.CanResolve(request, true);
-            parentMock.Verify(x => x.CanResolve(request, true));
+            IRequest request = this.requestMock.Object;
+            this.block.CanResolve(request, true);
+            this.parentMock.Verify(x => x.CanResolve(request, true));
         }
     }
 
@@ -45,10 +44,9 @@ namespace Ninject.Tests.Unit.ActivationBlockTests
         [Fact]
         public void DelegatesCallToParent()
         {
-            IRequest request = requestMock.Object;
-            block.Resolve(request);
-            parentMock.Verify(x => x.Resolve(request));
+            IRequest request = this.requestMock.Object;
+            this.block.Resolve(request);
+            this.parentMock.Verify(x => x.Resolve(request));
         }
     }
 }
-#endif

@@ -1,5 +1,4 @@
-﻿#if !NO_MOQ
-namespace Ninject.Tests.Integration.ModuleLoadingTests
+﻿namespace Ninject.Tests.Integration.ModuleLoadingTests
 {
     using System;
 
@@ -10,15 +9,18 @@ namespace Ninject.Tests.Integration.ModuleLoadingTests
     {
         public ModuleLoadingContext()
         {
-            this.Kernel = new StandardKernel();
+            this.NinjectSettings = new NinjectSettings();
+            this.KernelConfiguration = new KernelConfiguration(this.NinjectSettings);
         }
 
         public void Dispose()
         {
-            this.Kernel.Dispose();
+            this.KernelConfiguration.Dispose();
         }
 
-        protected StandardKernel Kernel { get; private set; }
+        protected INinjectSettings NinjectSettings { get; private set; }
+
+        protected IKernelConfiguration KernelConfiguration { get; private set; }
 
         protected string GetRegularMockModuleName()
         {
@@ -39,4 +41,3 @@ namespace Ninject.Tests.Integration.ModuleLoadingTests
         }
     }
 }
-#endif

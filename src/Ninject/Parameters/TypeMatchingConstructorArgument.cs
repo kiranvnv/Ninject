@@ -1,10 +1,10 @@
-﻿//-------------------------------------------------------------------------------
+﻿// -------------------------------------------------------------------------------------------------
 // <copyright file="TypeMatchingConstructorArgument.cs" company="Ninject Project Contributors">
-//   Copyright (c) 2009-2013 Ninject Project Contributors
-//   Authors: Ivan Appert (iappert@gmail.com)
-//           
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
 //   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-//   you may not use this file except in compliance with one of the Licenses.
+//   You may not use this file except in compliance with one of the Licenses.
 //   You may obtain a copy of the License at
 //
 //       http://www.apache.org/licenses/LICENSE-2.0
@@ -17,10 +17,12 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 // </copyright>
-//-------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
 namespace Ninject.Parameters
 {
     using System;
+
     using Ninject.Activation;
     using Ninject.Infrastructure;
     using Ninject.Planning.Targets;
@@ -104,6 +106,7 @@ namespace Ninject.Parameters
         public object GetValue(IContext context, ITarget target)
         {
             Ensure.ArgumentNotNull(context, "context");
+
             return this.ValueCallback(context, target);
         }
 
@@ -111,22 +114,20 @@ namespace Ninject.Parameters
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
-        /// <returns><c>True</c> if the objects are equal; otherwise <c>false</c></returns>
+        /// <returns><c>True</c> if the objects are equal; otherwise <c>false</c>.</returns>
         public bool Equals(IParameter other)
         {
-            var argument = other as TypeMatchingConstructorArgument;
-            return argument != null && argument.type == this.type;
+            return other is TypeMatchingConstructorArgument argument && argument.type == this.type;
         }
 
         /// <summary>
         /// Determines whether the object equals the specified object.
         /// </summary>
         /// <param name="obj">An object to compare with this object.</param>
-        /// <returns><c>True</c> if the objects are equal; otherwise <c>false</c></returns>
+        /// <returns><c>True</c> if the objects are equal; otherwise <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
-            var parameter = obj as IParameter;
-            return parameter != null ? this.Equals(parameter) : ReferenceEquals(this, obj);
+            return obj is IParameter parameter ? this.Equals(parameter) : ReferenceEquals(this, obj);
         }
 
         /// <summary>

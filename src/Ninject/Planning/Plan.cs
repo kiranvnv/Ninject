@@ -1,27 +1,50 @@
-#region License
-// 
-// Author: Nate Kohari <nate@enkari.com>
-// Copyright (c) 2007-2010, Enkari, Ltd.
-// 
-// Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
-// See the file LICENSE.txt for details.
-// 
-#endregion
-#region Using Directives
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Ninject.Infrastructure;
-using Ninject.Planning.Directives;
-#endregion
+// -------------------------------------------------------------------------------------------------
+// <copyright file="Plan.cs" company="Ninject Project Contributors">
+//   Copyright (c) 2007-2010 Enkari, Ltd. All rights reserved.
+//   Copyright (c) 2010-2017 Ninject Project Contributors. All rights reserved.
+//
+//   Dual-licensed under the Apache License, Version 2.0, and the Microsoft Public License (Ms-PL).
+//   You may not use this file except in compliance with one of the Licenses.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//   or
+//       http://www.microsoft.com/opensource/licenses.mspx
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+// </copyright>
+// -------------------------------------------------------------------------------------------------
 
 namespace Ninject.Planning
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
+    using Ninject.Infrastructure;
+    using Ninject.Planning.Directives;
+
     /// <summary>
     /// Describes the means by which a type should be activated.
     /// </summary>
     public class Plan : IPlan
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Plan"/> class.
+        /// </summary>
+        /// <param name="type">The type the plan describes.</param>
+        public Plan(Type type)
+        {
+            Ensure.ArgumentNotNull(type, "type");
+
+            this.Type = type;
+            this.Directives = new List<IDirective>();
+        }
+
         /// <summary>
         /// Gets the type that the plan describes.
         /// </summary>
@@ -33,25 +56,6 @@ namespace Ninject.Planning
         public ICollection<IDirective> Directives { get; private set; }
 
         /// <summary>
-        /// Gets the constructor injection directives.
-        /// </summary>
-        /// <value>The constructor injection directives.</value>
-        public IList<ConstructorInjectionDirective> ConstructorInjectionDirectives { get; private set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Plan"/> class.
-        /// </summary>
-        /// <param name="type">The type the plan describes.</param>
-        public Plan(Type type)
-        {
-            Ensure.ArgumentNotNull(type, "type");
-
-            Type = type;
-            Directives = new List<IDirective>();
-            ConstructorInjectionDirectives = new List<ConstructorInjectionDirective>();
-        }
-
-        /// <summary>
         /// Adds the specified directive to the plan.
         /// </summary>
         /// <param name="directive">The directive.</param>
@@ -59,13 +63,7 @@ namespace Ninject.Planning
         {
             Ensure.ArgumentNotNull(directive, "directive");
 
-            var constructorInjectionDirective = directive as ConstructorInjectionDirective;
-            if (constructorInjectionDirective != null)
-            {
-                ConstructorInjectionDirectives.Add(constructorInjectionDirective);
-            }
-
-            Directives.Add(directive);
+            this.Directives.Add(directive);
         }
 
         /// <summary>
@@ -76,7 +74,7 @@ namespace Ninject.Planning
         public bool Has<TDirective>()
             where TDirective : IDirective
         {
-            return GetAll<TDirective>().Any();
+            return this.GetAll<TDirective>().Any();
         }
 
         /// <summary>
@@ -87,7 +85,7 @@ namespace Ninject.Planning
         public TDirective GetOne<TDirective>()
             where TDirective : IDirective
         {
-            return GetAll<TDirective>().SingleOrDefault();
+            return this.GetAll<TDirective>().SingleOrDefault();
         }
 
         /// <summary>
@@ -98,7 +96,7 @@ namespace Ninject.Planning
         public IEnumerable<TDirective> GetAll<TDirective>()
             where TDirective : IDirective
         {
-            return Directives.OfType<TDirective>();
+            return this.Directives.OfType<TDirective>();
         }
     }
 }
